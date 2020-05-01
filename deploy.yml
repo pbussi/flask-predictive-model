@@ -7,32 +7,33 @@
   become_method: sudo
   tasks:
   - name: update cache
-    apt: name=python-software-properties state=present update_cache=yes cache_valid_time=43200
-  - name: disable lighttpd
-    systemd: name=lighttpd state=stopped enabled=no  # To avoid conflicts with nginx
+    apt: name=python3-software-properties state=present update_cache=yes cache_valid_time=43200
+#  - name: disable lighttpd
+#    systemd: name=lighttpd state=stopped enabled=no  # To avoid conflicts with nginx
   - name: install packages
-    apt: name={{item}} state=installed
+    apt: name={{item}} state=present
     with_items:
       - tree         # Optional
-      - python-pip   # Optional
-      - python-dev   # Optional
+#      - python-pip   # Optional
+#      - python-dev   # Optional
       - python3-pip
       - python3-dev
       - nginx
-
+      - git
+      - virtualenv
 # Install the app, note: don't do these tasks with become sudo
 - hosts: webservers
   tasks:
   - name: clone repo
     git:
-      repo: 'https://github.com/{{ github_user }}/{{ app_name }}.git'
+      repo: 'http://github.com/{{ github_user }}/{{ app_name }}.git'
       dest: /home/{{ ansible_ssh_user }}/{{ app_name }}
       update: yes  # Does a git pull if the repo already exists
   - name: install modules in a virtualenv
     pip:
       requirements: /home/{{ ansible_ssh_user }}/{{ app_name }}/requirements.txt
       virtualenv: /home/{{ ansible_ssh_user }}/{{ app_name }}/env
-      virtualenv_python: python3.5
+      virtualenv_python: python3
 
 # Configure app systemd service and nginx
 - hosts: webservers
@@ -40,7 +41,7 @@
   become_method: sudo
   tasks:
   - name: template systemd service config
-    copy:
+    template:
       src: .service
       dest: /etc/systemd/system/{{ app_name }}.service
   - name: start systemd app service
